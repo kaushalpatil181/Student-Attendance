@@ -1,0 +1,382 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Attendance Analysis Dashboard</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #eef2ff;
+            padding: 20px;
+            margin: 0;
+            color: #1e293b;
+        }
+
+        .container {
+            max-width: 1150px;
+            margin: auto;
+        }
+
+        h1 {
+            color: #1d4ed8;
+        }
+
+        .nav {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .nav a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        .logout-button {
+            background: #dc2626;
+            color: white;
+            padding: 9px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit, minmax(175px, 1fr)
+            );
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .card, .panel {
+            background: white;
+            padding: 22px;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px #dbe2ef;
+            margin-bottom: 18px;
+        }
+
+        .label {
+            color: #64748b;
+            margin-top: 0;
+        }
+
+        .number {
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        .blue { color: #2563eb; }
+        .green { color: #16a34a; }
+        .red { color: #dc2626; }
+        .orange { color: #ea580c; }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 650px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #dbeafe;
+        }
+
+        .chart-box {
+            position: relative;
+            height: 350px;
+        }
+
+        .progress {
+            height: 8px;
+            width: 100%;
+            min-width: 75px;
+            background: #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 8px;
+        }
+
+        .good {
+            color: #15803d;
+            font-weight: bold;
+        }
+
+        .warning {
+            color: #dc2626;
+            font-weight: bold;
+        }
+
+        .date-link {
+            display: inline-block;
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+
+            .chart-box {
+                height: 280px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <h1>Student Attendance Dashboard</h1>
+
+    <p>Automated Student Attendance Monitoring and Analysis System</p>
+
+    <!-- Navigation and Logout -->
+    <div class="nav">
+        <a href="/">Home</a>
+        <a href="/students">Manage Students</a>
+        <a href="/scan">Scan QR</a>
+        <a href="/date-report">Date-wise Report</a>
+
+        <form method="POST" action="/logout" style="margin:0;">
+            <button type="submit" class="logout-button">
+                Logout
+            </button>
+        </form>
+    </div>
+
+    <!-- Dashboard Summary Cards -->
+    <div class="cards">
+
+        <div class="card">
+            <p class="label">Total Students</p>
+            <div class="number blue">{{ total_students }}</div>
+        </div>
+
+        <div class="card">
+            <p class="label">Present Today</p>
+            <div class="number green">{{ present_today }}</div>
+        </div>
+
+        <div class="card">
+            <p class="label">Not Marked Present Today</p>
+            <div class="number red">{{ absent_today }}</div>
+        </div>
+
+        <div class="card">
+            <p class="label">Recorded Attendance Dates</p>
+            <div class="number orange">{{ total_days }}</div>
+        </div>
+
+        <div class="card">
+            <p class="label">Students Below 75%</p>
+            <div class="number red">{{ low_attendance }}</div>
+        </div>
+
+    </div>
+
+    <!-- Date-wise Report -->
+    <div class="panel">
+        <h2>Date-wise Attendance</h2>
+        <p>Kisi bhi date ki student attendance details dekhne ke liye report kholein.</p>
+        <a href="/date-report" class="date-link">
+            View Date-wise Report
+        </a>
+    </div>
+
+    <!-- Attendance Graph -->
+    <div class="panel">
+        <h2>Student Attendance Percentage Graph</h2>
+
+        {% if records and total_days > 0 %}
+
+        <div class="chart-box">
+            <canvas id="attendanceChart"></canvas>
+        </div>
+
+        {% else %}
+
+        <p>
+            Graph dekhne ke liye pehle students register karein
+            aur QR scan karke attendance mark karein.
+        </p>
+
+        {% endif %}
+    </div>
+
+    <!-- Student Attendance Table -->
+    <div class="panel">
+        <h2>Student-wise Attendance Analysis</h2>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Roll No</th>
+                        <th>Student Name</th>
+                        <th>Department</th>
+                        <th>Present Days</th>
+                        <th>Attendance %</th>
+                        <th>Analysis</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for student in records %}
+                    <tr>
+                        <td>{{ student.roll_no }}</td>
+                        <td>{{ student.name }}</td>
+                        <td>{{ student.department }}</td>
+
+                        <td>
+                            {{ student.present_days }} / {{ total_days }}
+                        </td>
+
+                        <td>
+                            {{ student.attendance_percentage }}%
+
+                            <div class="progress">
+                                <div
+                                    class="progress-fill"
+                                    style="
+                                        width: {{ student.attendance_percentage }}%;
+                                        background:
+                                        {% if student.attendance_percentage < 75 %}
+                                            #ef4444
+                                        {% else %}
+                                            #2563eb
+                                        {% endif %};
+                                    ">
+                                </div>
+                            </div>
+                        </td>
+
+                        <td>
+                            {% if total_days == 0 %}
+                                No data
+                            {% elif student.attendance_percentage < 75 %}
+                                <span class="warning">
+                                    Below 75%
+                                </span>
+                            {% else %}
+                                <span class="good">
+                                    75% or above
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+
+                {% else %}
+                    <tr>
+                        <td colspan="6">
+                            No students registered yet.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <p style="font-size:13px;color:#64748b;">
+        Note: Percentage recorded attendance dates ke basis par hai.
+        Official college percentage ke liye actual working days record karein.
+        "Not marked present" ka matlab confirmed absent hona zaroori nahi hai.
+    </p>
+
+</div>
+
+<!-- Chart.js Graph -->
+{% if records and total_days > 0 %}
+<script>
+    const studentNames = {{ records | map(attribute='name') | list | tojson }};
+    const attendancePercentages = {{ records | map(attribute='attendance_percentage') | list | tojson }};
+
+    const canvas = document.getElementById("attendanceChart");
+
+    new Chart(canvas, {
+        type: "bar",
+
+        data: {
+            labels: studentNames,
+
+            datasets: [{
+                label: "Attendance Percentage (%)",
+                data: attendancePercentages,
+
+                backgroundColor: attendancePercentages.map(
+                    percentage =>
+                        percentage < 75 ? "#ef4444" : "#3b82f6"
+                ),
+
+                borderRadius: 5
+            }]
+        },
+
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+
+                    title: {
+                        display: true,
+                        text: "Attendance Percentage (%)"
+                    }
+                },
+
+                x: {
+                    title: {
+                        display: true,
+                        text: "Students"
+                    }
+                }
+            },
+
+            plugins: {
+                legend: {
+                    display: true
+                }
+            }
+        }
+    });
+</script>
+{% endif %}
+
+</body>
+</html>

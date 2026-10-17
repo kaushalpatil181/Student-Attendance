@@ -1,0 +1,60 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #eef2ff;
+            padding: 30px 15px;
+        }
+        .card {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 25px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px #dbe2ef;
+        }
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0 15px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>Admin Login</h1>
+    <p>Student Attendance Management System</p>
+
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('login') }}">
+        <label for="username">Username</label>
+        <input id="username" name="username"
+               autocomplete="username" required>
+
+        <label for="password">Password</label>
+        <input id="password" type="password" name="password"
+               autocomplete="current-password" required>
+
+        <button type="submit">Login</button>
+    </form>
+</div>
+</body>
+</html>

@@ -1,0 +1,252 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Date-wise Attendance Report</title>
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #eef2ff;
+            color: #1e293b;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: auto;
+        }
+
+        .card {
+            background: white;
+            padding: 22px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px #dbe2ef;
+        }
+
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+        }
+
+        .number {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .green { color: #15803d; }
+        .red { color: #dc2626; }
+
+        input, button {
+            padding: 11px;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+
+        input { border: 1px solid #cbd5e1; }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover { opacity: 0.85; }
+
+        .delete-btn {
+            background: #dc2626;
+            padding: 9px 12px;
+            white-space: nowrap;
+        }
+
+        a {
+            color: #2563eb;
+            text-decoration: none;
+            margin-right: 12px;
+        }
+
+        .table-wrap { overflow-x: auto; }
+
+        table {
+            width: 100%;
+            min-width: 780px;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        th { background: #dbeafe; }
+
+        .flash {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .flash.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .card { padding: 15px; }
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <div class="card">
+        <h1>Date-wise Attendance Report</h1>
+        <p>Automated Student Attendance Monitoring System</p>
+
+        <p>
+            <a href="/">Home</a>
+            <a href="/students">Students</a>
+            <a href="/scan">Scan QR</a>
+            <a href="/report">Dashboard</a>
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>Select Attendance Date</h2>
+
+        <form method="GET" action="{{ url_for('date_report') }}">
+            <label for="date">Choose date: </label>
+
+            <input
+                type="date"
+                id="date"
+                name="date"
+                value="{{ selected_date }}"
+                required
+            >
+
+            <button type="submit">View Report</button>
+        </form>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="flash {{ 'error' if category == 'error' else '' }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endwith %}
+
+    <div class="summary">
+        <div class="card">
+            <p>Total Students</p>
+            <div class="number">{{ total_students }}</div>
+        </div>
+
+        <div class="card">
+            <p>Present Students</p>
+            <div class="number green">{{ present_count }}</div>
+        </div>
+
+        <div class="card">
+            <p>Not Marked Present</p>
+            <div class="number red">{{ not_marked_count }}</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Attendance for {{ selected_date }}</h2>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Roll Number</th>
+                        <th>Student Name</th>
+                        <th>Department</th>
+                        <th>Attendance Time</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for student in records %}
+                    <tr>
+                        <td>{{ student.roll_no }}</td>
+                        <td>{{ student.name }}</td>
+                        <td>{{ student.department }}</td>
+
+                        <td>
+                            {{ student.attendance_time or '-' }}
+                        </td>
+
+                        <td>
+                            {% if student.status == 'Present' %}
+                                <strong class="green">Present</strong>
+                            {% else %}
+                                <strong class="red">Not Marked</strong>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if student.status == 'Present' %}
+                                <form
+                                    method="POST"
+                                    action="{{ url_for(
+                                        'delete_attendance',
+                                        student_id=student.student_id
+                                    ) }}"
+                                    onsubmit="return confirm(
+                                        'Kya aap {{ student.name }} ki {{ selected_date }} wali attendance delete karna chahte hain?'
+                                    );"
+                                >
+                                    <input
+                                        type="hidden"
+                                        name="date"
+                                        value="{{ selected_date }}"
+                                    >
+
+                                    <button
+                                        type="submit"
+                                        class="delete-btn"
+                                    >
+                                        Delete Attendance
+                                    </button>
+                                </form>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="6">No students registered yet.</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <p>
+            Note: "Not Marked" ka matlab attendance record nahi mila.
+            Isse zaroori nahi ki student vaastav mein absent tha.
+        </p>
+    </div>
+
+</div>
+</body>
+</html>

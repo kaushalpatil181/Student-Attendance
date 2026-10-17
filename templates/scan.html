@@ -1,0 +1,80 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>QR Attendance Scanner</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #eef2ff;
+            padding: 25px;
+            text-align: center;
+        }
+        .card {
+            background: white;
+            max-width: 550px;
+            padding: 24px;
+            margin: auto;
+            border-radius: 12px;
+        }
+        #reader {
+            width: 100%;
+            max-width: 420px;
+            margin: 20px auto;
+        }
+        #result { overflow-wrap: anywhere; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>QR Attendance Scanner</h1>
+    <p>Camera permission allow karke student QR scan karein.</p>
+
+    <div id="reader"></div>
+    <p id="result">Scanner start ho raha hai...</p>
+
+    <a href="/students">Students</a>
+    <a href="/report">Attendance Report</a>
+</div>
+
+<script>
+    const result = document.getElementById("result");
+
+    function onScanSuccess(decodedText) {
+        scanner.pause(true);
+        result.textContent = "Attendance check ho rahi hai...";
+
+        fetch("/mark-attendance", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ token: decodedText })
+        })
+        .then(async response => {
+            const data = await response.json();
+            result.textContent = data.message;
+
+            if (!response.ok) {
+                scanner.resume();
+            }
+        })
+        .catch(() => {
+            result.textContent = "Server connection error.";
+            scanner.resume();
+        });
+    }
+
+    const scanner = new Html5QrcodeScanner(
+        "reader",
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        false
+    );
+
+    scanner.render(onScanSuccess);
+</script>
+</body>
+</html>
